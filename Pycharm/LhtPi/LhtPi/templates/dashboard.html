@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>SlidePi Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #00bfff;
+        }
+        a {
+            color: #cc66ff;
+            margin-right: 15px;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .tab-content {
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 8px 16px;
+            background-color: #9147ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #772ce8;
+        }
+        .media-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .media-item {
+            background: #2e2e2e;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            width: 180px;
+        }
+        .media-item img.thumbnail {
+            height: 100px;
+            object-fit: contain;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            background: #fff;
+        }
+        .duration-input {
+            width: 80px;
+            padding: 4px;
+        }
+        .input-file {
+            background: #fff;
+            color: #000;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1><i class="fas fa-film"></i> SlidePi Dashboard</h1>
+    <nav>
+        <a href="#" onclick="showTab('info')">Allgemeine Info</a> |
+        <a href="#" onclick="showTab('medien')">Medienverwaltung</a> |
+        <a href="#" onclick="showTab('praesentation')">Präsentation</a> |
+        <a href="#" onclick="showTab('system')">System & Upgrade</a>
+        {% if admin_logged_in %}
+            | <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        {% endif %}
+    </nav>
+
+    <!-- Allgemeine Info -->
+    <div id="info" class="tab-content" style="display:none;">
+        <h3><i class="fas fa-info-circle"></i> Systeminformationen (bald verfügbar)</h3>
+    </div>
+
+    <!-- Medienverwaltung -->
+    <div id="medien" class="tab-content" style="display:none;">
+        <h3><i class="fas fa-folder-open"></i> Neue Datei hochladen</h3>
+        <form method="POST" action="/upload" enctype="multipart/form-data" onsubmit="setActiveTab('medien')">
+            <input type="file" name="file" class="input-file" required>
+            <input type="hidden" name="active_tab" id="activeTabUpload">
+            <button type="submit" class="btn"><i class="fas fa-upload"></i> Hochladen</button>
+        </form>
+
+        <h4><i class="fas fa-images"></i> Hochgeladene Medien</h4>
+        <div class="media-grid">
+            {% for media in media_files %}
+                <div class="media-item">
+                    <img src="{{ url_for('uploaded_file', filename=media) }}" alt="{{ media }}" class="thumbnail">
+                    <p>{{ media }}</p>
+                    <form method="POST" action="/delete" onsubmit="setActiveTab('medien')">
+                        <input type="hidden" name="filename" value="{{ media }}">
+                        <input type="hidden" name="active_tab" id="activeTabDelete">
+                        <button type="submit" class="btn"><i class="fas fa-trash"></i> Löschen</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Präsentation -->
+    <div id="praesentation" class="tab-content" style="display:none;">
+        <h3><i class="fas fa-photo-video"></i> Präsentationseinstellungen</h3>
+
+        <h5>🗂️ Hochgeladene Medien</h5>
+        <form method="POST" action="/update_playlist" onsubmit="setActiveTab('praesentation')">
+            <input type="hidden" name="active_tab" id="activeTabPlaylist">
+            <div class="media-grid">
+                {% for media in media_files %}
+                    <div class="media-item">
+                        <img src="{{ url_for('uploaded_file', filename=media) }}" alt="{{ media }}" class="thumbnail">
+                        <p>{{ media }}</p>
+                        <label>
+                            <input type="checkbox" name="playlist_files" value="{{ media }}" {% if media in playlist %}checked{% endif %}>
+                            Zur Wiedergabeliste
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn"><i class="fas fa-save"></i> Wiedergabeliste aktualisieren</button>
+        </form>
+
+        <hr>
+
+        <h5><i class="fas fa-clock"></i> Anzeigezeit festlegen</h5>
+        <form method="POST" action="/save_durations" onsubmit="setActiveTab('praesentation')">
+            <input type="hidden" name="active_tab" id="activeTabDuration">
+            <div class="media-grid">
+                {% for media in playlist %}
+                    <div class="media-item">
+                        <img src="{{ url_for('uploaded_file', filename=media) }}" alt="{{ media }}" class="thumbnail">
+                        <p><strong>{{ media }}</strong></p>
+                        <label>Anzeigedauer (Sek.):</label><br>
+                        <input type="number" name="duration_{{ media }}" value="{{ durations.get(media, 10) }}" min="1" class="duration-input">
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn"><i class="fas fa-stopwatch"></i> Anzeigedauer speichern</button>
+        </form>
+    </div>
+
+    <!-- System & Upgrade -->
+    <div id="system" class="tab-content" style="display:none;">
+        {% if admin_logged_in %}
+            <h3><i class="fas fa-tools"></i> System & Upgrade</h3>
+            <form method="POST" action="/ota_update">
+                <button type="submit" class="btn"><i class="fas fa-download"></i> OTA-Update (Git Pull)</button>
+            </form>
+            <br>
+            <form method="POST" action="/restart">
+                <button type="submit" class="btn"><i class="fas fa-sync-alt"></i> Neustart</button>
+            </form>
+            <br>
+            <a href="/disk_space" class="btn"><i class="fas fa-hdd"></i> Speicherplatz anzeigen</a>
+        {% else %}
+            <h3><i class="fas fa-lock"></i> Geschützter Bereich</h3>
+            <p>Du musst dich <a href="/login">einloggen</a>, um diesen Bereich zu sehen.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        function showTab(id) {
+            localStorage.setItem('activeTab', id);
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.style.display = 'none');
+            const target = document.getElementById(id);
+            if (target) target.style.display = 'block';
+        }
+
+        function setActiveTab(tabId) {
+            document.getElementById('activeTabUpload').value = tabId;
+            document.getElementById('activeTabDelete').value = tabId;
+            document.getElementById('activeTabPlaylist').value = tabId;
+            document.getElementById('activeTabDuration').value = tabId;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const tab = "{{ active_tab | default('info') }}";
+            showTab(tab);
+        });
+    </script>
+</body>
+</html>

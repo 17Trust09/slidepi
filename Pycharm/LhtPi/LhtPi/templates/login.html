@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login – SlidePi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background-color: #2e2e2e;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        h2 {
+            color: #00bfff;
+            margin-bottom: 20px;
+        }
+        input[type="password"] {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            width: 220px;
+            margin-bottom: 15px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #9147ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .btn:hover {
+            background-color: #772ce8;
+        }
+        .message {
+            margin-top: 15px;
+            color: #ff4d4d;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2><i class="fas fa-lock"></i> Admin Login</h2>
+        <form method="POST" action="/login">
+            <input type="password" name="password" placeholder="Passwort eingeben" required><br>
+            <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
+        </form>
+        {% if message %}
+            <p class="message">{{ message }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
