@@ -52,15 +52,15 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2><i class="fas fa-lock"></i> Admin Login</h2>
-        <form method="POST" action="/login">
-            <input type="password" name="password" placeholder="Passwort eingeben" required><br>
-            <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
-        </form>
-        {% if message %}
-            <p class="message">{{ message }}</p>
-        {% endif %}
-    </div>
+    <h2>Login</h2>
+    <form method="POST" action="/login">
+        <label for="username">Benutzername:</label>
+        <input type="text" name="username" id="username" required>
+        <br>
+        <label for="password">Passwort:</label>
+        <input type="password" name="password" id="password" required>
+        <br>
+        <input type="submit" value="Einloggen">
+    </form>
 </body>
 </html>
