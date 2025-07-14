@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file, jsonify
 import os
 import json
 from werkzeug.utils import secure_filename
@@ -26,6 +26,14 @@ def load_json(filename, default):
 def save_json(filename, data):
     with open(filename, 'w') as f:
         json.dump(data, f, indent=4)
+
+def write_status(status, current_media, time_left):
+    with open("state.json", "w") as f:
+        json.dump({
+            "status": status,
+            "current_media": current_media,
+            "time_left": time_left
+        }, f)
 
 @app.route('/media/<filename>')
 def media(filename):
@@ -170,6 +178,24 @@ def play():
     ]
 
     return render_template('play.html', media_files=media_files)
+
+@app.route('/status')
+def get_status():
+    try:
+        with open("state.json", "r") as f:
+            return jsonify(json.load(f))
+    except:
+        return jsonify({"status": "Unbekannt", "current_media": "-", "time_left": "-"})
+
+@app.route('/update_status', methods=['POST'])
+def update_status():
+    try:
+        data = request.json
+        save_json("state.json", data)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 if __name__ == '__main__':
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
