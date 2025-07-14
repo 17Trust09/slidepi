@@ -2,141 +2,154 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>SlidePi Wiedergabe</title>
+    <title>SlidePi Präsentation</title>
     <style>
         body {
-            background-color: black;
             margin: 0;
-            overflow: hidden;
+            background-color: black;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
         }
+
         #media-container {
             max-width: 100vw;
-            max-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            max-height: 90vh;
         }
-        #controls {
+
+        img, video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .controls {
             position: fixed;
             bottom: 20px;
             display: flex;
             gap: 20px;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 18px;
-            border: none;
-            border-radius: 5px;
-            background-color: #8e44ad;
+
+        .controls button {
+            background-color: #9b59b6;
             color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
+        }
+
+        .controls button:hover {
+            background-color: #8e44ad;
         }
     </style>
 </head>
 <body>
-    <div id="media-container">
-        <img id="media" src="" alt="Media" style="max-height: 100vh; max-width: 100vw; display: none;">
-        <video id="video" controls autoplay style="max-height: 100vh; max-width: 100vw; display: none;"></video>
-    </div>
+    <div id="media-container"></div>
 
-    <div id="controls">
-        <button onclick="prev()">⏮️ Zurück</button>
-        <button onclick="togglePause()" id="pauseBtn">⏸️ Pause</button>
-        <button onclick="next()">⏭️ Weiter</button>
+    <div class="controls">
+        <button onclick="prevMedia()">⏮ Zurück</button>
+        <button onclick="togglePause()">⏸ Pause</button>
+        <button onclick="nextMedia()">⏭ Weiter</button>
     </div>
 
     <script>
-        let playlist = [];
-        let durations = {};
-        let current = 0;
-        let playing = true;
-        let timeoutId = null;
+        const mediaList = {{ media_files | tojson }};
+        let currentIndex = 0;
+        let isPaused = false;
+        let currentTimeout;
+        let currentInterval;
+        let timeLeft = 0;
+        let currentVideo = null;
 
-        const img = document.getElementById('media');
-        const video = document.getElementById('video');
-        const pauseBtn = document.getElementById('pauseBtn');
-
-        async function loadPlaylist() {
-            const res = await fetch('/playlist.json');
-            playlist = await res.json();
-
-            const dur = await fetch('/durations.json');
-            durations = await dur.json();
-
-            showItem(current);
+        function sendStatusUpdate(status, filename, timeLeft) {
+            fetch('/update_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: status,
+                    current_media: filename,
+                    time_left: timeLeft
+                })
+            });
         }
 
-        function showItem(index) {
-            clearTimeout(timeoutId);
-            if (index < 0 || index >= playlist.length) return;
+        function showMedia(index) {
+            clearTimeout(currentTimeout);
+            clearInterval(currentInterval);
+            const container = document.getElementById('media-container');
+            container.innerHTML = '';
+            currentVideo = null;
 
-            const filename = playlist[index].filename || playlist[index];
-            const ext = filename.split('.').pop().toLowerCase();
-            const duration = durations[filename] || 10;
-            const src = `/media/${filename}`;
+            const media = mediaList[index];
+            timeLeft = media.duration;
 
-            if (ext === 'mp4') {
-                img.style.display = 'none';
-                video.style.display = 'block';
-                video.src = src;
-                video.play();
+            if (media.filename.toLowerCase().endsWith('.mp4')) {
+                const video = document.createElement('video');
+                video.src = media.path;
+                video.autoplay = true;
+                video.onended = () => nextMedia();
+                video.style.maxWidth = '100%';
+                video.style.maxHeight = '100%';
+                container.appendChild(video);
+                currentVideo = video;
+
+                currentInterval = setInterval(() => {
+                    if (!isPaused) {
+                        timeLeft--;
+                        sendStatusUpdate('playing', media.filename, timeLeft);
+                    }
+                }, 1000);
+
             } else {
-                video.style.display = 'none';
-                video.pause();
-                img.style.display = 'block';
-                img.src = src;
+                const img = document.createElement('img');
+                img.src = media.path;
+                container.appendChild(img);
+
+                currentInterval = setInterval(() => {
+                    if (!isPaused) {
+                        timeLeft--;
+                        sendStatusUpdate('playing', media.filename, timeLeft);
+                        if (timeLeft <= 0) {
+                            nextMedia();
+                        }
+                    }
+                }, 1000);
             }
 
-            // Nächster Wechsel nur bei Bildern (Videos haben eigene Steuerung)
-            if (ext !== 'mp4') {
-                timeoutId = setTimeout(() => {
-                    next();
-                }, duration * 1000);
-            }
+            sendStatusUpdate('playing', media.filename, timeLeft);
         }
 
-        function next() {
-            current = (current + 1) % playlist.length;
-            showItem(current);
+        function nextMedia() {
+            currentIndex = (currentIndex + 1) % mediaList.length;
+            showMedia(currentIndex);
         }
 
-        function prev() {
-            current = (current - 1 + playlist.length) % playlist.length;
-            showItem(current);
+        function prevMedia() {
+            currentIndex = (currentIndex - 1 + mediaList.length) % mediaList.length;
+            showMedia(currentIndex);
         }
 
         function togglePause() {
-            if (playlist.length === 0) return;
-            const filename = playlist[current].filename || playlist[current];
-            const ext = filename.split('.').pop().toLowerCase();
-
-            if (ext === 'mp4') {
-                if (video.paused) {
-                    video.play();
-                    pauseBtn.innerText = "⏸️ Pause";
-                } else {
-                    video.pause();
-                    pauseBtn.innerText = "▶️ Fortsetzen";
-                }
+            isPaused = !isPaused;
+            const button = document.querySelector('.controls button:nth-child(2)');
+            if (isPaused) {
+                sendStatusUpdate('paused', mediaList[currentIndex].filename, timeLeft);
+                if (currentVideo) currentVideo.pause();
+                button.innerText = '▶️ Fortsetzen';
             } else {
-                if (playing) {
-                    clearTimeout(timeoutId);
-                    pauseBtn.innerText = "▶️ Fortsetzen";
-                } else {
-                    timeoutId = setTimeout(() => {
-                        next();
-                    }, (durations[filename] || 10) * 1000);
-                    pauseBtn.innerText = "⏸️ Pause";
-                }
-                playing = !playing;
+                sendStatusUpdate('playing', mediaList[currentIndex].filename, timeLeft);
+                if (currentVideo) currentVideo.play();
+                button.innerText = '⏸ Pause';
             }
         }
 
-        loadPlaylist();
+        // Start
+        showMedia(currentIndex);
     </script>
 </body>
 </html>
