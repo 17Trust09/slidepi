@@ -52,15 +52,14 @@
     </style>
 </head>
 <body>
-    <h2>Login</h2>
-    <form method="POST" action="/login">
-        <label for="username">Benutzername:</label>
-        <input type="text" name="username" id="username" required>
-        <br>
-        <label for="password">Passwort:</label>
-        <input type="password" name="password" id="password" required>
-        <br>
-        <input type="submit" value="Einloggen">
-    </form>
+    <div class="login-container">
+        <h2>Admin Login</h2>
+        <form method="POST" action="/login">
+            <input type="hidden" name="username" value="admin">
+            <label for="password">Passwort:</label><br>
+            <input type="password" name="password" id="password" required><br>
+            <input type="submit" class="btn" value="Einloggen">
+        </form>
+    </div>
 </body>
 </html>
