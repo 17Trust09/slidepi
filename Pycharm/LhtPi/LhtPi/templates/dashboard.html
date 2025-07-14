@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -109,20 +110,14 @@
     <div class="container" style="padding: 20px;">
 
         {% if tab == 'medien' %}
-        <h3><i class="fas fa-upload"></i> Neue Datei hochladen</h3>
-        <form method="post" action="/upload" enctype="multipart/form-data">
-            <input type="file" name="file">
-            <button type="submit" class="btn btn-purple"><i class="fas fa-upload"></i> Hochladen</button>
-        </form>
-        <hr>
         <h3><i class="fas fa-photo-video"></i> Hochgeladene Medien</h3>
         <div class="media-gallery">
             {% for file in media_files %}
             <div class="media-item">
                 {% if file.filename.endswith('.mp4') %}
-                <video src="{{ file.path }}" controls></video>
+                <video src="{{ file.path }}" controls style="max-height: 150px; object-fit: contain;"></video>
                 {% else %}
-                <img src="{{ file.path }}" alt="{{ file.filename }}">
+                <img src="{{ file.path }}" alt="{{ file.filename }}" style="max-height: 150px; object-fit: contain;">
                 {% endif %}
                 <p>{{ file.filename }}</p>
 
@@ -131,18 +126,13 @@
                     <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Löschen</button>
                 </form>
 
+                {% if file.filename not in playlist_filenames %}
                 <form method="post" action="/toggle_playlist">
                     <input type="hidden" name="filename" value="{{ file.filename }}">
-                    {% set in_playlist = file.filename in playlist_filenames %}
-                    <button type="submit" class="btn btn-purple">
-                        <i class="fas fa-list"></i>
-                        {% if in_playlist %}
-                            Aus Präsentation entfernen
-                        {% else %}
-                            Zur Präsentation hinzufügen
-                        {% endif %}
-                    </button>
+                    <input type="hidden" name="tab" value="medien">
+                    <button type="submit" class="btn btn-purple"><i class="fas fa-plus"></i> Zur Präsentation hinzufügen</button>
                 </form>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -155,18 +145,33 @@
             <div class="playlist-item" data-filename="{{ item.filename }}">
                 <div class="drag-handle"><i class="fas fa-arrows-alt"></i></div>
                 {% if item.filename.endswith('.mp4') %}
-                <video src="{{ item.path }}" controls></video>
+                <video src="{{ item.path }}" controls style="max-height: 150px; object-fit: contain;"></video>
                 {% else %}
-                <img src="{{ item.path }}" alt="{{ item.filename }}">
+                <img src="{{ item.path }}" alt="{{ item.filename }}" style="max-height: 150px; object-fit: contain;">
                 {% endif %}
                 <p>{{ item.filename }}</p>
                 <label>Dauer (Sek):</label>
                 <input type="number" class="duration-input" value="{{ item.duration }}" data-filename="{{ item.filename }}">
+
+                <form method="post" action="/toggle_playlist?tab=praesentation">
+                    <input type="hidden" name="filename" value="{{ item.filename }}">
+                    <input type="hidden" name="tab" value="praesentation">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-minus"></i> Aus Präsentation entfernen</button>
+                </form>
             </div>
             {% endfor %}
         </div>
         <button class="btn btn-purple" onclick="savePlaylist()"><i class="fas fa-save"></i> Wiedergabeliste speichern</button>
         <button class="btn btn-purple" onclick="saveDurations()"><i class="fas fa-clock"></i> Dauer speichern</button>
+        {% endif %}
+
+        {% if tab == 'info' %}
+        <h3><i class="fas fa-info-circle"></i> Systemstatus</h3>
+
+        <div style="margin-top: 20px;">
+            <h4><i class="fas fa-eye"></i> Live-Vorschau der Präsentation</h4>
+            <iframe src="/play" width="400" height="250" style="border: 2px solid #8e44ad; border-radius: 8px;"></iframe>
+        </div>
         {% endif %}
 
         {% if tab == 'system' %}
@@ -198,7 +203,6 @@
             });
         }
 
-        // Drag & Drop
         const container = document.getElementById('playlist');
         if (container) {
             let dragged;
