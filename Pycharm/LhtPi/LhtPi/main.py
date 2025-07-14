@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
 import os
 import json
 from werkzeug.utils import secure_filename
@@ -34,7 +34,7 @@ def media(filename):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form['password'] == 'raspberry':
+        if request.form['password'] == 'admin':
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
@@ -43,17 +43,21 @@ def login():
 
 @app.route('/toggle_playlist', methods=['POST'])
 def toggle_playlist():
-    filename = request.form.get('filename')
-    playlist = load_json('playlist.json', [])
-    filenames = [item["filename"] for item in playlist]
+    filename = request.form['filename']
+    tab = request.args.get('tab') or 'medien'
 
-    if filename in filenames:
-        playlist = [item for item in playlist if item["filename"] != filename]
+    # Lade aktuelle Playlist
+    playlist = load_json('playlist.json', [])
+    playlist_filenames = [item['filename'] for item in playlist]
+
+    if filename in playlist_filenames:
+        playlist = [item for item in playlist if item['filename'] != filename]
     else:
-        playlist.append({"filename": filename})
+        playlist.append({'filename': filename, 'duration': 10})  # Standarddauer 10 Sekunden
 
     save_json('playlist.json', playlist)
-    return redirect(url_for('index', tab='medien'))
+
+    return redirect(url_for('index', tab=tab))
 
 @app.route('/logout')
 def logout():
@@ -80,6 +84,8 @@ def index():
     playlist = load_json('playlist.json', [])
     durations = load_json('durations.json', {})
 
+    playlist_filenames = [item["filename"] for item in playlist]
+
     presentation_files = [
         {
             "filename": item["filename"],
@@ -93,7 +99,8 @@ def index():
     return render_template('dashboard.html',
                            tab=tab,
                            media_files=media_files,
-                           playlist=presentation_files)
+                           playlist=presentation_files,
+                           playlist_filenames=playlist_filenames)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -129,7 +136,8 @@ def delete_file():
 @app.route('/save_playlist', methods=['POST'])
 def save_playlist():
     filenames = request.form.getlist('playlist[]')
-    playlist = [{"filename": f} for f in filenames]
+    durations = load_json('durations.json', {})
+    playlist = [{"filename": f, "duration": durations.get(f, 10)} for f in filenames]
     save_json('playlist.json', playlist)
     return '', 204
 
@@ -138,6 +146,30 @@ def save_durations():
     data = request.json
     save_json('durations.json', data)
     return '', 204
+
+@app.route('/playlist.json')
+def serve_playlist():
+    return send_file('playlist.json', mimetype='application/json')
+
+@app.route('/durations.json')
+def serve_durations():
+    return send_file('durations.json', mimetype='application/json')
+
+@app.route('/play')
+def play():
+    playlist = load_json('playlist.json', [])
+    durations = load_json('durations.json', {})
+
+    media_files = [
+        {
+            "filename": item["filename"],
+            "duration": durations.get(item["filename"], 10),
+            "path": url_for('media', filename=item["filename"])
+        }
+        for item in playlist
+    ]
+
+    return render_template('play.html', media_files=media_files)
 
 if __name__ == '__main__':
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
