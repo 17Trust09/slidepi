@@ -168,14 +168,16 @@
         {% if tab == 'info' %}
         <h3><i class="fas fa-info-circle"></i> Systemstatus</h3>
 
+        <div id="status-box" style="background:#2e2e2e;padding:15px;border-radius:8px;margin-bottom:20px;">
+            <p>Status: <span id="status-text">Lade...</span></p>
+            <p>Aktuelles Medium: <span id="current-media">-</span></p>
+            <p>Verbleibende Zeit: <span id="time-left">-</span> Sekunden</p>
+        </div>
+
         <div style="margin-top: 20px;">
             <h4><i class="fas fa-eye"></i> Live-Vorschau der Präsentation</h4>
             <iframe src="/play" width="400" height="250" style="border: 2px solid #8e44ad; border-radius: 8px;"></iframe>
         </div>
-        {% endif %}
-
-        {% if tab == 'system' %}
-        <h3><i class="fas fa-cogs"></i> Systemfunktionen folgen bald...</h3>
         {% endif %}
     </div>
 
@@ -228,3 +230,29 @@
     </script>
 </body>
 </html>
+
+<script>
+    function updateStatus() {
+        fetch('/status')
+            .then(res => res.json())
+            .then(data => {
+                const statusMap = {
+                                    'playing': '🟢 Wird abgespielt',
+                                    'paused': '⏸️ Pausiert',
+                                    'stopped': '⏹️ Gestoppt'
+};
+document.getElementById('status-text').innerText = statusMap[data.status] || '-';
+                document.getElementById('current-media').innerText = data.current_media || '-';
+                document.getElementById('time-left').innerText = data.time_left !== undefined ? data.time_left + ' Sekunden' : '-';
+            })
+            .catch(err => {
+                console.error('Status konnte nicht geladen werden', err);
+            });
+    }
+
+    // Nur wenn der Status-Container vorhanden ist, starten
+    if (document.getElementById('status-box')) {
+        updateStatus();
+        setInterval(updateStatus, 1000);
+    }
+</script>
