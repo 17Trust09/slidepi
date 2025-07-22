@@ -1,3 +1,4 @@
+<!-- Datei: templates/play.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -55,6 +56,13 @@
         .controls button:hover {
             background-color: #8e44ad;
         }
+
+        #no-media {
+            color: #fff;
+            font-size: 2em;
+            margin-top: 40vh;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -72,19 +80,24 @@
         let isPaused = false;
 
         window.onload = async () => {
+            if (!mediaList || mediaList.length === 0) {
+                document.getElementById('media-container').innerHTML =
+                  '<div id="no-media">Keine Medien in der Wiedergabeliste.</div>';
+                document.querySelector('.controls').style.display = 'none';
+                return;
+            }
+
             try {
                 const response = await fetch('/status');
                 const data = await response.json();
                 currentIndex = data.current_index || 0;
                 isPaused = (data.status === 'paused');
-                if (mediaList.length > 0 && mediaList[currentIndex]) {
+                if (mediaList[currentIndex]) {
                     showMedia(currentIndex);
                 }
             } catch (e) {
                 console.error("Fehler beim Laden des Status", e);
-                if (mediaList.length > 0 && mediaList[0]) {
-                    showMedia(0);  // Fallback
-                }
+                if (mediaList[0]) showMedia(0);
             }
         };
 
@@ -127,7 +140,7 @@
                 currentVideo = video;
 
                 currentInterval = setInterval(() => {
-                    if (!isPaused) {
+                    if (!isPaused && !video.paused) {
                         timeLeft--;
                         sendStatusUpdate('playing', media.filename, timeLeft);
                     }
