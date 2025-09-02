@@ -8,23 +8,24 @@
         body {
             margin: 0;
             background-color: black;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
             overflow: hidden;
         }
 
         #media-container {
-            max-width: 100vw;
-            max-height: 90vh;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
         }
 
         img, video {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;     /* randlos; für „alles sichtbar“ = contain */
+            object-position: center;
         }
 
         .fade {
@@ -34,27 +35,6 @@
 
         .fade.show {
             opacity: 1;
-        }
-
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .controls button {
-            background-color: #9b59b6;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .controls button:hover {
-            background-color: #8e44ad;
         }
 
         #no-media {
@@ -68,12 +48,6 @@
 <body>
     <div id="media-container"></div>
 
-    <div class="controls">
-        <button onclick="prevMedia()">⏮ Zurück</button>
-        <button onclick="togglePause()">⏸ Pause</button>
-        <button onclick="nextMedia()">⏭ Weiter</button>
-    </div>
-
     <script>
         const mediaList = {{ media_files | tojson }};
         let currentIndex = 0;
@@ -83,7 +57,6 @@
             if (!mediaList || mediaList.length === 0) {
                 document.getElementById('media-container').innerHTML =
                   '<div id="no-media">Keine Medien in der Wiedergabeliste.</div>';
-                document.querySelector('.controls').style.display = 'none';
                 return;
             }
 
@@ -169,25 +142,6 @@
         function nextMedia() {
             currentIndex = (currentIndex + 1) % mediaList.length;
             showMedia(currentIndex);
-        }
-
-        function prevMedia() {
-            currentIndex = (currentIndex - 1 + mediaList.length) % mediaList.length;
-            showMedia(currentIndex);
-        }
-
-        function togglePause() {
-            isPaused = !isPaused;
-            const button = document.querySelector('.controls button:nth-child(2)');
-            if (isPaused) {
-                sendStatusUpdate('paused', mediaList[currentIndex].filename, timeLeft);
-                if (currentVideo) currentVideo.pause();
-                button.innerText = '▶️ Fortsetzen';
-            } else {
-                sendStatusUpdate('playing', mediaList[currentIndex].filename, timeLeft);
-                if (currentVideo) currentVideo.play();
-                button.innerText = '⏸ Pause';
-            }
         }
     </script>
 </body>
